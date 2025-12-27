@@ -6,7 +6,7 @@ using UnityEngine.UI;
 public class CrController : MonoBehaviour
 {
     private CharacterController characterController;
-    private Animator animator; // Animasyoncusu ekledik
+    private Animator animator;
 
     [Header("Hareket Ayarları")]
     [SerializeField] private float yurumeHizi = 3f;
@@ -23,7 +23,24 @@ public class CrController : MonoBehaviour
     [SerializeField] private float groundDistance = 0.3f;
     [SerializeField] private LayerMask groundMask;
 
-    // Özel Değişkenler
+    // --- YENİ SES AYARLARI ---
+    [Header("Ses Ayarları")]
+    [Tooltip("Karakterin üzerindeki AudioSource bileşenini buraya sürükleyin")]
+    [SerializeField] private AudioSource muzikKaynagi;
+
+    [Tooltip("Karakterin üzerindeki İKİNCİ AudioSource bileşenini buraya sürükleyin")]
+    [SerializeField] private AudioSource adimKaynagi;
+
+    [Tooltip("Müzik dosyasını buraya sürükleyin")]
+    [SerializeField] private AudioClip muzikDosyasi;
+
+    [Tooltip("Ayak sesi dosyasını buraya sürükleyin")]
+    [SerializeField] private AudioClip adimDosyasi;
+
+    [SerializeField] private float adimSikligi = 0.5f; // Adım sesi çalma hızı
+    private float adimZamanlayicisi;
+    // -------------------------
+
     private Vector3 _velocity;
     private bool _isGrounded;
     float health = 100;
@@ -33,9 +50,16 @@ public class CrController : MonoBehaviour
         characterController = GetComponent<CharacterController>();
         animator = GetComponentInChildren<Animator>();
 
-        // Eğer butona basılırsa zıpla
         if (jumpButton != null)
             jumpButton.onClick.AddListener(Jump);
+
+        // MÜZİĞİ BAŞLAT
+        if (muzikKaynagi != null && muzikDosyasi != null)
+        {
+            muzikKaynagi.clip = muzikDosyasi;
+            muzikKaynagi.loop = true; // Döngüye al
+            muzikKaynagi.Play();
+        }
     }
 
     private void Update()
@@ -45,33 +69,50 @@ public class CrController : MonoBehaviour
 
         if (_isGrounded && _velocity.y < 0)
         {
-            _velocity.y = -2f; // Yere tam otursun
+            _velocity.y = -2f;
         }
 
-        // 2. JOYSTICK VERİSİNİ AL
+        // 2. HAREKET INPUT
         float x = movementJoystick.Horizontal;
         float z = movementJoystick.Vertical;
-
         Vector3 move = transform.right * x + transform.forward * z;
-
-        // Joystick ne kadar itiliyor? (0 ile 1 arası)
         float inputSiddeti = new Vector2(x, z).magnitude;
 
-        // 3. HIZI BELİRLE VE HAREKET ET
-        // Eğer joystick çok itiliyorsa (0.8'den büyükse) koş, azsa yürü
+        // 3. HIZ VE HAREKET
         float anlikHiz = (inputSiddeti > 0.8f) ? kosmaHizi : yurumeHizi;
-
-        // Eğer hiç hareket yoksa hızı sıfırla ki kaymasın
         if (inputSiddeti < 0.1f) move = Vector3.zero;
 
         characterController.Move(move * anlikHiz * Time.deltaTime);
 
-        // 4. ANİMASYONU GÜNCELLE (ÖNEMLİ KISIM)
-        // inputSiddeti: 0 ise durur, 0.5 ise yürür, 1 ise koşar.
-        // 0.1f parametresi animasyonun yumuşak geçiş yapmasını sağlar (DampTime).
-        //animator.SetFloat("SpeedX", inputSiddeti, 0.1f, Time.deltaTime);
+        // 4. ANİMASYON
         animator.SetFloat("SpeedX", x, 0.1f, Time.deltaTime);
         animator.SetFloat("SpeedZ", z, 0.1f, Time.deltaTime);
+
+        // --- ADIM SESİ KONTROLÜ ---
+        // Eğer yerdeysek VE hareket ediyorsak ses çalalım
+        if (_isGrounded && inputSiddeti > 0.1f)
+        {
+            adimZamanlayicisi -= Time.deltaTime; // Geri sayım
+
+            if (adimZamanlayicisi <= 0)
+            {
+                // Sesi çal
+                if (adimKaynagi != null && adimDosyasi != null)
+                {
+                    adimKaynagi.PlayOneShot(adimDosyasi);
+                }
+
+                // Koşuyorsa (0.8'den büyükse) daha sık çalsın
+                float hizCarpan = (inputSiddeti > 0.8f) ? 1.5f : 1f;
+                adimZamanlayicisi = adimSikligi / hizCarpan;
+            }
+        }
+        else
+        {
+            // Durduğunda sıfırla
+            adimZamanlayicisi = 0;
+        }
+        // -------------------------
 
         // 5. YERÇEKİMİ
         _velocity.y += _gravity * Time.deltaTime;
@@ -82,7 +123,6 @@ public class CrController : MonoBehaviour
     {
         if (_isGrounded)
         {
-            //_velocity.y = Mathf.Sqrt(_jump * -2f * _gravity);
             animator.SetTrigger("isJumped");
         }
     }
@@ -90,11 +130,8 @@ public class CrController : MonoBehaviour
     public void TakeDamage(float dam)
     {
         health = Mathf.Clamp(health - dam, 0, 100);
-
         if (health <= 0)
         {
-            //animasyon burada çalışacak ve game over verilecek
-
             Debug.Log("Öldün");
         }
     }

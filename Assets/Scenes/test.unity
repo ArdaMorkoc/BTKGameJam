@@ -702,17 +702,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   storySlides:
-  - image: {fileID: 21300000, guid: c740a76586f4eb44486cacb1d339f6cb, type: 3}
-    subtitle: a
+  - image: {fileID: 21300000, guid: 45f923404811ae443974a1863749ab2b, type: 3}
+    subtitle: "B\xFCy\xFCk s\u0131z\u0131nt\u0131dan sonra d\xFCnya de\u011Fi\u015Fti.
+      Radyasyon sessizce her yere yay\u0131ld\u0131..."
     audioClip: {fileID: 0}
-  - image: {fileID: 21300000, guid: e919f8b19e6260d44b25ce176dd8ee66, type: 3}
-    subtitle: b
+  - image: {fileID: 21300000, guid: a6305751149c26a4db69f32d59bdb2a9, type: 3}
+    subtitle: "K\xFC\xE7\xFCk sand\u0131\u011F\u0131m\u0131z yarat\u0131klar devasa
+      canavarlara d\xF6n\xFC\u015Ft\xFC. \xD6r\xFCmcekler art\u0131k d\xFCnyan\u0131n
+      yeni hakimi."
     audioClip: {fileID: 0}
   - image: {fileID: 21300022, guid: f760e8c2f86be0a46a16e0a7a5bfe8ed, type: 3}
-    subtitle: c
+    subtitle: "\u0130zole tarlam\u0131z, bu kaostaki son g\xFCvenli b\xF6lge. Ama
+      koloninin g\xF6z\xFC bizim topraklar\u0131m\u0131zda."
     audioClip: {fileID: 0}
   - image: {fileID: 21300000, guid: a3fd1ebc89178f4489503c48d6ed17c8, type: 3}
-    subtitle: d
+    subtitle: "\u0130stila ba\u015Flad\u0131! Onlar\u0131 tarlaya yakla\u015Ft\u0131rma
+      ve kolonini ne pahas\u0131na olursa olsun savun!"
     audioClip: {fileID: 0}
   storyImageDisplay: {fileID: 873840948}
   subtitleText: {fileID: 2117104239}

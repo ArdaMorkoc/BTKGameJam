@@ -1,152 +1,190 @@
-using System.Collections;
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
+using System.Collections;
+using TMPro;
+
+[System.Serializable]
+public class StorySlide
+{
+    public Sprite image;
+    public string subtitle;
+    public AudioClip audioClip;
+}
 
 public class StoryPanel : MonoBehaviour
 {
-    [Header("Ekranda Değişecek Parçalar")]
-    public Image mangaEkrani;
-    public TextMeshProUGUI altYazi;
+    [Header("Hikaye Slaytları")]
+    public StorySlide[] storySlides;
 
-    [Header("Gecme İkonu Ayarları")]
-    public GameObject gecmeSimgesi;
-    public float zorunluBekleme = 3.0f; // Butonun çıkması için gereken süre
-    public float otomatikGecisSuresi = 10.0f; // Hiç basmazsa kendi geçeceği süre
-    public float fadeHizi = 1.5f;
+    [Header("UI Elemanları")]
+    public Image storyImageDisplay;
+    public TextMeshProUGUI subtitleText;
+    public TextMeshProUGUI skipText;
+    public Button skipButton;
 
-    [Header("Sırasıyla İçerikler")]
-    public Sprite[] mangaResimleri;
-    [TextArea(3, 10)]
-    public string[] hikayeYazilari;
-    public AudioClip[] sesEfektleri;
+    [Header("Audio")]
+    public AudioSource audioSource;
 
     [Header("Ayarlar")]
-    public string oyunSahnesiAdi = "Day1";
+    public float imageDuration = 10f;
+    public float skipTextStartTime = 3f;
+    public float skipFadeDuration = 0.5f;
+    public string nextSceneName = "GameScene";
 
-    private int suankiSira = 0;
-    private AudioSource sesKaynagi;
-    private bool gecebilirMi = false;
-    private CanvasGroup iconCanvasGroup;
+    private int currentSlideIndex = 0;
+    private float slideTimer = 0f;
+    private bool canSkip = false;
+    private bool sceneLoading = false;
+
+    private CanvasGroup skipCanvasGroup;
+    private Coroutine skipFadeCoroutine;
+    private AsyncOperation preloadSceneOperation;
 
     void Start()
     {
-        sesKaynagi = gameObject.AddComponent<AudioSource>();
+        // Skip CanvasGroup
+        skipCanvasGroup = skipText.GetComponent<CanvasGroup>();
+        if (skipCanvasGroup == null)
+            skipCanvasGroup = skipText.gameObject.AddComponent<CanvasGroup>();
 
-        if (gecmeSimgesi != null)
-        {
-            iconCanvasGroup = gecmeSimgesi.GetComponent<CanvasGroup>();
-            if (iconCanvasGroup == null) iconCanvasGroup = gecmeSimgesi.AddComponent<CanvasGroup>();
+        skipCanvasGroup.alpha = 0f;
+        skipText.gameObject.SetActive(false);
 
-            gecmeSimgesi.SetActive(false);
-            iconCanvasGroup.alpha = 0;
-        }
+        skipButton.onClick.AddListener(OnSkipButtonClicked);
 
-        Guncelle();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
+        // 🎯 SAHNEYİ ARKADA YÜKLE
+        StartCoroutine(PreloadNextScene());
+
+        ShowSlide(0);
     }
 
-    public void Ileri()
+    void Update()
     {
-        // Eğer zorunlu bekleme süresi dolmadıysa basamasın
-        if (!gecebilirMi) return;
+        if (sceneLoading) return;
 
-        suankiSira++;
+        slideTimer += Time.deltaTime;
 
-        if (suankiSira >= mangaResimleri.Length)
+        if (!canSkip && slideTimer >= skipTextStartTime)
         {
-            SceneManager.LoadScene(oyunSahnesiAdi);
+            ActivateSkipText();
+        }
+
+        if (slideTimer >= imageDuration)
+        {
+            NextSlide();
+        }
+    }
+
+    IEnumerator PreloadNextScene()
+    {
+        preloadSceneOperation = SceneManager.LoadSceneAsync(nextSceneName);
+        preloadSceneOperation.allowSceneActivation = false;
+
+        while (preloadSceneOperation.progress < 0.9f)
+            yield return null;
+
+        // %90’da hazır, story bitmesini bekliyor
+    }
+
+    void ShowSlide(int index)
+    {
+        if (index < storySlides.Length)
+        {
+            StorySlide slide = storySlides[index];
+
+            storyImageDisplay.sprite = slide.image;
+            subtitleText.text = slide.subtitle;
+
+            if (slide.audioClip != null)
+            {
+                audioSource.clip = slide.audioClip;
+                audioSource.Play();
+            }
+
+            slideTimer = 0f;
+            canSkip = false;
+
+            HideSkipText();
         }
         else
         {
-            Guncelle();
+            FinishStory();
         }
     }
 
-    void Guncelle()
+    void ActivateSkipText()
     {
-        // -- HER ŞEYİ SIFIRLA --
-        gecebilirMi = false;
+        canSkip = true;
+        skipText.gameObject.SetActive(true);
 
-        // Önemli: Eski sayaçları (Auto Skip dahil) durduruyoruz ki üst üste binmesin
-        StopAllCoroutines();
+        if (skipFadeCoroutine != null)
+            StopCoroutine(skipFadeCoroutine);
 
-        if (gecmeSimgesi != null)
-        {
-            gecmeSimgesi.SetActive(false);
-            iconCanvasGroup.alpha = 0;
-        }
-
-        // 1. Resim
-        if (suankiSira < mangaResimleri.Length)
-        {
-            mangaEkrani.sprite = mangaResimleri[suankiSira];
-            mangaEkrani.preserveAspect = true;
-        }
-
-        // 2. Yazı
-        if (altYazi != null && suankiSira < hikayeYazilari.Length)
-        {
-            altYazi.text = hikayeYazilari[suankiSira];
-        }
-
-        // 3. Ses
-        if (sesEfektleri.Length > suankiSira && sesEfektleri[suankiSira] != null)
-        {
-            sesKaynagi.Stop();
-            sesKaynagi.clip = sesEfektleri[suankiSira];
-            sesKaynagi.Play();
-        }
-
-        // 4. Zamanlayıcıları Başlat
-        StartCoroutine(AkisYonetimi());
+        skipFadeCoroutine = StartCoroutine(SkipFadePulse());
     }
 
-    // --- TEK COROUTINE İÇİNDE TÜM ZAMANLAMAYI YÖNETİYORUZ ---
-    IEnumerator AkisYonetimi()
+    IEnumerator SkipFadePulse()
     {
-        // A. ZORUNLU BEKLEME (3 Saniye)
-        // Oyuncu bu sürede geçemez, buton görünmez.
-        yield return new WaitForSeconds(zorunluBekleme);
+        // Fade in
+        yield return FadeSkip(0f, 1f);
 
-        // B. BUTONU AKTİF ET
-        gecebilirMi = true; // Artık tıklayabilir
-        if (gecmeSimgesi != null)
-        {
-            gecmeSimgesi.SetActive(true);
-            StartCoroutine(PulseEfekti()); // Işık efektini ayrı başlat
-        }
+        // Kısa bekleme
+        yield return new WaitForSeconds(0.3f);
 
-        // C. OTOMATİK GEÇİŞ İÇİN GERİ KALAN SÜREYİ BEKLE
-        // (Toplam süre - Zorunlu bekleme) kadar daha bekleriz.
-        // Örneğin: 10 - 3 = 7 saniye daha bekler.
-        float kalanSure = otomatikGecisSuresi - zorunluBekleme;
-
-        // Eğer kalan süre negatifse (yani auto skip süresini 2 sn yaptıysan) beklemesin
-        if (kalanSure > 0)
-        {
-            yield return new WaitForSeconds(kalanSure);
-        }
-
-        // D. SÜRE DOLDU, HALA GEÇİLMEDİYSE OTOMATİK GEÇ
-        // Buraya geldiyse oyuncu butona basmamış demektir.
-        Ileri();
+        // Fade out
+        yield return FadeSkip(1f, 0f);
     }
 
-    // --- PULSE (ISIK KISILIP AÇILMA) EFEKTİ ---
-    IEnumerator PulseEfekti()
+    IEnumerator FadeSkip(float from, float to)
     {
-        float zamanSayaci = 0f;
-        while (true)
+        float t = 0f;
+        while (t < skipFadeDuration)
         {
-            zamanSayaci += Time.deltaTime;
-            float alphaDegeri = 0.2f + Mathf.PingPong(zamanSayaci * fadeHizi, 0.8f);
-
-            if (iconCanvasGroup != null)
-                iconCanvasGroup.alpha = alphaDegeri;
-
+            t += Time.deltaTime;
+            skipCanvasGroup.alpha = Mathf.Lerp(from, to, t / skipFadeDuration);
             yield return null;
         }
+        skipCanvasGroup.alpha = to;
+    }
+
+    void HideSkipText()
+    {
+        if (skipFadeCoroutine != null)
+            StopCoroutine(skipFadeCoroutine);
+
+        skipCanvasGroup.alpha = 0f;
+        skipText.gameObject.SetActive(false);
+    }
+
+    void OnSkipButtonClicked()
+    {
+        if (canSkip)
+        {
+            NextSlide();
+        }
+    }
+
+    void NextSlide()
+    {
+        if (audioSource.isPlaying)
+            audioSource.Stop();
+
+        currentSlideIndex++;
+        ShowSlide(currentSlideIndex);
+    }
+
+    void FinishStory()
+    {
+        sceneLoading = true;
+
+        if (audioSource.isPlaying)
+            audioSource.Stop();
+
+        // 🎯 ŞAK DİYE SAHNE
+        preloadSceneOperation.allowSceneActivation = true;
     }
 }

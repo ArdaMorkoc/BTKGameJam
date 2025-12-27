@@ -23,24 +23,14 @@ public class CrController : MonoBehaviour
     [SerializeField] private float groundDistance = 0.3f;
     [SerializeField] private LayerMask groundMask;
 
-    // --- YENİ SES AYARLARI ---
-    [Header("Ses Ayarları")]
-    [Tooltip("Karakterin üzerindeki AudioSource bileşenini buraya sürükleyin")]
-    [SerializeField] private AudioSource muzikKaynagi;
+    [Header("Ses Ayarları")] // YENİ: Ses değişkenleri
+    [SerializeField] private AudioSource backgroundMusicSource;
+    [SerializeField] private AudioSource footstepSource;
+    [SerializeField] private AudioClip backgroundMusicClip;
+    [SerializeField] private AudioClip walkClip;
+    [SerializeField] private AudioClip runClip; // Koşma sesi varsa buraya, yoksa boş kalabilir
 
-    [Tooltip("Karakterin üzerindeki İKİNCİ AudioSource bileşenini buraya sürükleyin")]
-    [SerializeField] private AudioSource adimKaynagi;
-
-    [Tooltip("Müzik dosyasını buraya sürükleyin")]
-    [SerializeField] private AudioClip muzikDosyasi;
-
-    [Tooltip("Ayak sesi dosyasını buraya sürükleyin")]
-    [SerializeField] private AudioClip adimDosyasi;
-
-    [SerializeField] private float adimSikligi = 0.5f; // Adım sesi çalma hızı
-    private float adimZamanlayicisi;
-    // -------------------------
-
+    // Özel Değişkenler
     private Vector3 _velocity;
     private bool _isGrounded;
     float health = 100;
@@ -52,13 +42,13 @@ public class CrController : MonoBehaviour
 
         if (jumpButton != null)
             jumpButton.onClick.AddListener(Jump);
-
-        // MÜZİĞİ BAŞLAT
-        if (muzikKaynagi != null && muzikDosyasi != null)
+        
+        // YENİ: Müzik çalma başlatma
+        if (backgroundMusicSource != null && backgroundMusicClip != null)
         {
-            muzikKaynagi.clip = muzikDosyasi;
-            muzikKaynagi.loop = true; // Döngüye al
-            muzikKaynagi.Play();
+            backgroundMusicSource.clip = backgroundMusicClip;
+            backgroundMusicSource.loop = true; // Müziğin tekrar etmesi için
+            backgroundMusicSource.Play();
         }
     }
 
@@ -69,54 +59,67 @@ public class CrController : MonoBehaviour
 
         if (_isGrounded && _velocity.y < 0)
         {
-            _velocity.y = -2f;
+            _velocity.y = -2f; 
         }
 
-        // 2. HAREKET INPUT
+        // 2. JOYSTICK VERİSİNİ AL
         float x = movementJoystick.Horizontal;
         float z = movementJoystick.Vertical;
+
         Vector3 move = transform.right * x + transform.forward * z;
         float inputSiddeti = new Vector2(x, z).magnitude;
 
-        // 3. HIZ VE HAREKET
+        // 3. HIZI BELİRLE VE HAREKET ET
         float anlikHiz = (inputSiddeti > 0.8f) ? kosmaHizi : yurumeHizi;
+
         if (inputSiddeti < 0.1f) move = Vector3.zero;
 
         characterController.Move(move * anlikHiz * Time.deltaTime);
 
-        // 4. ANİMASYON
+        // YENİ: Ayak sesi kontrolü fonksiyonunu çağır
+        HandleFootsteps(inputSiddeti);
+
+        // 4. ANİMASYONU GÜNCELLE
         animator.SetFloat("SpeedX", x, 0.1f, Time.deltaTime);
         animator.SetFloat("SpeedZ", z, 0.1f, Time.deltaTime);
-
-        // --- ADIM SESİ KONTROLÜ ---
-        // Eğer yerdeysek VE hareket ediyorsak ses çalalım
-        if (_isGrounded && inputSiddeti > 0.1f)
-        {
-            adimZamanlayicisi -= Time.deltaTime; // Geri sayım
-
-            if (adimZamanlayicisi <= 0)
-            {
-                // Sesi çal
-                if (adimKaynagi != null && adimDosyasi != null)
-                {
-                    adimKaynagi.PlayOneShot(adimDosyasi);
-                }
-
-                // Koşuyorsa (0.8'den büyükse) daha sık çalsın
-                float hizCarpan = (inputSiddeti > 0.8f) ? 1.5f : 1f;
-                adimZamanlayicisi = adimSikligi / hizCarpan;
-            }
-        }
-        else
-        {
-            // Durduğunda sıfırla
-            adimZamanlayicisi = 0;
-        }
-        // -------------------------
 
         // 5. YERÇEKİMİ
         _velocity.y += _gravity * Time.deltaTime;
         characterController.Move(_velocity * Time.deltaTime);
+    }
+
+    // YENİ: Ayak seslerini yöneten fonksiyon
+    private void HandleFootsteps(float inputSiddeti)
+    {
+        // Eğer ses kaynağı atanmamışsa işlem yapma
+        if (footstepSource == null) return;
+
+        // Yerdeysek ve hareket ediyorsak (inputSiddeti az da olsa varsa)
+        if (_isGrounded && inputSiddeti > 0.1f)
+        {
+            // Koşuyor mu kontrolü
+            bool isRunning = inputSiddeti > 0.8f;
+            AudioClip targetClip = (isRunning && runClip != null) ? runClip : walkClip;
+
+            // Eğer şu an ses çalmıyorsa veya çalan ses yanlış ise (örn: yürürken koşmaya geçtiyse)
+            if (!footstepSource.isPlaying || footstepSource.clip != targetClip)
+            {
+                footstepSource.clip = targetClip;
+                footstepSource.loop = true; // Adım sesinin sürekli gelmesi için loop
+                footstepSource.Play();
+            }
+
+            // Opsiyonel: Koşarken sesi biraz inceltip hızlandırır (pitch)
+            footstepSource.pitch = isRunning ? 1.2f : 1.0f;
+        }
+        else
+        {
+            // Duruyorsa veya havadaysa sesi kes
+            if (footstepSource.isPlaying)
+            {
+                footstepSource.Stop();
+            }
+        }
     }
 
     private void Jump()
@@ -130,6 +133,7 @@ public class CrController : MonoBehaviour
     public void TakeDamage(float dam)
     {
         health = Mathf.Clamp(health - dam, 0, 100);
+
         if (health <= 0)
         {
             Debug.Log("Öldün");

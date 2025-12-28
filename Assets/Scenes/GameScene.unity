@@ -9160,7 +9160,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Arda An\u0131l Morko\xE7\nHarun \u015Eahin\nAdil Umut Tuncer"
+  m_text: "Arda An\u0131l Morko\xE7\nHarun \u015Eahin\nY\xFCcel \xC7a\u011Fakan Say\u0131l\u0131r\nAdil
+    Umut Tuncer"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

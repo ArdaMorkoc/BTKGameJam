@@ -26,6 +26,13 @@ public class Gun : MonoBehaviour
     public Camera fpsCamera;
     public LayerMask enemyLayer;
 
+    // --- YENİ EKLENEN KISIM: Ses Efektleri ---
+    [Header("Ses Efektleri")]
+    public AudioSource gunAudioSource;
+    public AudioClip shootClip;
+    public AudioClip reloadClip;
+    // -----------------------------------------
+
     [Header("Mermi Ayarları")]
     public int currentAmmo = 0;
     public int magCapasity = 12;
@@ -36,6 +43,7 @@ public class Gun : MonoBehaviour
     private float birSonrakiAtisZamani = 0f;
     private bool isReloading = false;
     public Animator animator;
+
     private void Start()
     {
         currentAmmo = magCapasity;
@@ -60,7 +68,6 @@ public class Gun : MonoBehaviour
         RaycastHit hit;
 
         // Raycast yerine SphereCast kullandık. Bu "kalın" bir ışın atar.
-        // mermiKalinligi (0.5f) sayesinde zombinin azıcık yanına bile tutsan vurur.
         if (Physics.SphereCast(fpsCamera.transform.position, mermiKalinligi, fpsCamera.transform.forward, out hit, range, enemyLayer))
         {
             // Eğer süre dolduysa ATEŞ ET
@@ -73,14 +80,12 @@ public class Gun : MonoBehaviour
         }
     }
 
-
-
     public void ReloadButton()
     {
         StartCoroutine(ReloadYap());
     }
-    
-     IEnumerator ReloadYap()
+
+    IEnumerator ReloadYap()
     {
         isReloading = true;
         if (ammoText != null)
@@ -88,6 +93,13 @@ public class Gun : MonoBehaviour
             ammoText.text = "Reloading...";
             ammoText.color = Color.red;
         }
+
+        // --- YENİ EKLENEN KISIM: Reload Sesi ---
+        if (gunAudioSource != null && reloadClip != null)
+        {
+            gunAudioSource.PlayOneShot(reloadClip);
+        }
+        // ----------------------------------------
 
         yield return new WaitForSeconds(reloadSuresi);
 
@@ -101,6 +113,13 @@ public class Gun : MonoBehaviour
         currentAmmo--;
         GuncelleUI();
 
+        // --- YENİ EKLENEN KISIM: Ateş Sesi ---
+        if (gunAudioSource != null && shootClip != null)
+        {
+            gunAudioSource.PlayOneShot(shootClip);
+        }
+        // -------------------------------------
+
         StartCoroutine(EkranTitret());
         if (namluIsigi != null) StartCoroutine(NamluIsigiYak());
 
@@ -113,9 +132,9 @@ public class Gun : MonoBehaviour
             Rigidbody rb = hit.collider.attachedRigidbody;
             if (rb != null)
             {
-                // Zombiyi geriye doğru it ama havaya kaldırma (Vektörü düzeltiyoruz)
+                // Zombiyi geriye doğru it ama havaya kaldırma
                 Vector3 itmeYonu = -hit.normal;
-                itmeYonu.y = 0; // Y eksenini sıfırla ki zombi havaya uçmasın
+                itmeYonu.y = 0;
 
                 rb.AddForce(itmeYonu * itmeGucu, ForceMode.Impulse);
             }

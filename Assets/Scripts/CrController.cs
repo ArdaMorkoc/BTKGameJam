@@ -22,10 +22,16 @@ public class CrController : MonoBehaviour
     [SerializeField] private float groundDistance = 0.3f;
     [SerializeField] private LayerMask groundMask;
 
-    [Header("Ses Ayarları")]
+    [Header("Ses Ayarları (Efekt)")]
     [SerializeField] private AudioSource footstepSource;
     [SerializeField] private AudioClip walkClip;
     [SerializeField] private AudioClip runClip;
+
+    // --- YENİ EKLENEN KISIM: Müzik Ayarları ---
+    [Header("Ses Ayarları (Müzik)")]
+    [SerializeField] private AudioSource musicSource;        // Müzik çalacak AudioSource
+    [SerializeField] private AudioClip backgroundMusic;      // Çalınacak müzik dosyası
+    // ------------------------------------------
 
     private Vector3 _velocity;
     private bool _isGrounded;
@@ -38,6 +44,9 @@ public class CrController : MonoBehaviour
 
         if (jumpButton != null)
             jumpButton.onClick.AddListener(Jump);
+
+        // --- YENİ EKLENEN KISIM: Müziği Başlat ---
+        PlayBackgroundMusic();
     }
 
     private void Update()
@@ -102,6 +111,21 @@ public class CrController : MonoBehaviour
         else
         {
             if (footstepSource.isPlaying) footstepSource.Stop();
+        }
+    }
+
+    // --- YENİ EKLENEN KISIM: Müzik Fonksiyonu ---
+    private void PlayBackgroundMusic()
+    {
+        // Eğer müzik kaynağı ve klip atanmışsa çal
+        if (musicSource != null && backgroundMusic != null)
+        {
+            musicSource.clip = backgroundMusic;
+            musicSource.loop = true; // Müziğin sürekli döngüde çalmasını sağlar
+            if (!musicSource.isPlaying)
+            {
+                musicSource.Play();
+            }
         }
     }
 

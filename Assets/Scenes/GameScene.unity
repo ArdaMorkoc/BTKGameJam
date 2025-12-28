@@ -2406,6 +2406,8 @@ MonoBehaviour:
   mouseSensitivity: 100
   playerBody: {fileID: 389063552}
   lookJoystick: {fileID: 1237027976}
+  minY: -35
+  maxY: 40
 --- !u!1 &341607750
 GameObject:
   m_ObjectHideFlags: 0

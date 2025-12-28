@@ -27,14 +27,14 @@ public class CrController : MonoBehaviour
     [SerializeField] private AudioClip walkClip;
     [SerializeField] private AudioClip runClip;
 
-    // --- YENİ EKLENEN KISIM: Müzik Ayarları ---
     [Header("Ses Ayarları (Müzik)")]
-    [SerializeField] private AudioSource musicSource;        // Müzik çalacak AudioSource
-    [SerializeField] private AudioClip backgroundMusic;      // Çalınacak müzik dosyası
-    // ------------------------------------------
+    [SerializeField] private AudioSource musicSource;
+    [SerializeField] private AudioClip backgroundMusic;
 
     private Vector3 _velocity;
     private bool _isGrounded;
+    private bool canJump = true;
+
     float health = 100;
 
     private void Start()
@@ -45,39 +45,44 @@ public class CrController : MonoBehaviour
         if (jumpButton != null)
             jumpButton.onClick.AddListener(Jump);
 
-        // --- YENİ EKLENEN KISIM: Müziği Başlat ---
         PlayBackgroundMusic();
     }
 
     private void Update()
     {
-        // 1. ZEMİN KONTROLÜ
-        _isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+        // 1️⃣ ZEMİN KONTROLÜ
+        bool groundedNow = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+
+        if (groundedNow && !_isGrounded)
+        {
+            // yeni yere bastı
+            canJump = true;
+        }
+
+        _isGrounded = groundedNow;
 
         if (_isGrounded && _velocity.y < 0)
         {
-            _velocity.y = -2f; // Yere yapışık kalması için küçük bir baskı
+            _velocity.y = -2f;
         }
 
-        // 2. INPUT VE HAREKET
+        // 2️⃣ HAREKET
         float x = movementJoystick.Horizontal;
         float z = movementJoystick.Vertical;
 
         Vector3 move = transform.right * x + transform.forward * z;
         float inputSiddeti = new Vector2(x, z).magnitude;
 
-        // Hız Belirleme
         float anlikHiz = (inputSiddeti > 0.8f) ? kosmaHizi : yurumeHizi;
         if (inputSiddeti < 0.1f) move = Vector3.zero;
 
-        // Karakteri Hareket Ettir (Yatay)
         characterController.Move(move * anlikHiz * Time.deltaTime);
 
-        // 3. YERÇEKİMİ HESAPLAMA (Dikey)
+        // 3️⃣ GRAVITY
         _velocity.y += _gravity * Time.deltaTime;
         characterController.Move(_velocity * Time.deltaTime);
 
-        // 4. SES VE ANİMASYON
+        // 4️⃣ SES & ANİMASYON
         HandleFootsteps(inputSiddeti);
 
         if (animator != null)
@@ -87,17 +92,28 @@ public class CrController : MonoBehaviour
         }
     }
 
+    private void Jump()
+    {
+        if (!_isGrounded || !canJump) return;
+
+        canJump = false;
+        _isGrounded = false;
+
+        if (animator != null)
+            animator.SetTrigger("isJumped");
+
+        _velocity.y = Mathf.Sqrt(_jump * -2f * _gravity);
+    }
+
     private void HandleFootsteps(float inputSiddeti)
     {
         if (footstepSource == null || walkClip == null) return;
 
-        // Yerdeysek ve joystick çekiliyse
         if (_isGrounded && inputSiddeti > 0.1f)
         {
             bool isRunning = inputSiddeti > 0.8f;
             AudioClip targetClip = (isRunning && runClip != null) ? runClip : walkClip;
 
-            // Klip değiştiyse veya çalmıyorsa başlat
             if (!footstepSource.isPlaying || footstepSource.clip != targetClip)
             {
                 footstepSource.clip = targetClip;
@@ -105,44 +121,31 @@ public class CrController : MonoBehaviour
                 footstepSource.Play();
             }
 
-            // Koşarken sesi hızlandır
             footstepSource.pitch = isRunning ? 1.25f : 1.0f;
         }
         else
         {
-            if (footstepSource.isPlaying) footstepSource.Stop();
+            if (footstepSource.isPlaying)
+                footstepSource.Stop();
         }
     }
 
-    // --- YENİ EKLENEN KISIM: Müzik Fonksiyonu ---
     private void PlayBackgroundMusic()
     {
-        // Eğer müzik kaynağı ve klip atanmışsa çal
         if (musicSource != null && backgroundMusic != null)
         {
             musicSource.clip = backgroundMusic;
-            musicSource.loop = true; // Müziğin sürekli döngüde çalmasını sağlar
+            musicSource.loop = true;
+
             if (!musicSource.isPlaying)
-            {
                 musicSource.Play();
-            }
-        }
-    }
-
-    private void Jump()
-    {
-        if (_isGrounded)
-        {
-            if (animator != null) animator.SetTrigger("isJumped");
-
-            // FİZİKSEL ZIPLAMA: Hızı yukarı yönlü değiştir
-            _velocity.y = Mathf.Sqrt(_jump * -2f * _gravity);
         }
     }
 
     public void TakeDamage(float dam)
     {
         health = Mathf.Clamp(health - dam, 0, 100);
-        if (health <= 0) Debug.Log("Öldün");
+        if (health <= 0)
+            Debug.Log("Öldün");
     }
 }

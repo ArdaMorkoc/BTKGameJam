@@ -36,6 +36,8 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
+
+
         // Tüm panelleri başlangıçta kapalı tut
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (settingsPanel != null) settingsPanel.SetActive(false);
@@ -53,7 +55,8 @@ public class GameManager : MonoBehaviour
 
         if (volumeSlider != null)
         {
-            volumeSlider.value = AudioListener.volume;
+            volumeSlider.value = PlayerPrefs.GetFloat("Volume", 1f);
+            SetVolume(volumeSlider.value); // 🔥 KRİTİK SATIR
             volumeSlider.onValueChanged.AddListener(SetVolume);
         }
 
@@ -111,6 +114,7 @@ public class GameManager : MonoBehaviour
     public void SetVolume(float volume)
     {
         AudioListener.volume = volume;
+        PlayerPrefs.SetFloat("Volume", volume); // Kaydet
     }
 
     public void ExitGame()

@@ -11,6 +11,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Paneller")]
     public GameObject startPanel;
+    public GameObject pausePanel; // YENİ: Duraklatma paneli
     public GameObject settingsPanel;
     public GameObject creditsPanel;
     public GameObject gameOverPanel;
@@ -21,10 +22,11 @@ public class GameManager : MonoBehaviour
     public TMP_Text highScoreText;
 
     [Header("Ayarlar")]
-    public Slider volumeSlider; // Settings panelindeki slider
+    public Slider volumeSlider;
 
     private int currentScore = 0;
     private int highScore = 0;
+    private bool isPaused = false; // Oyun duraklatıldı mı?
 
     void Awake()
     {
@@ -34,11 +36,13 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // Başlangıçta her şeyi kapat, sadece start paneli aç
+        // Tüm panelleri başlangıçta kapalı tut
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (settingsPanel != null) settingsPanel.SetActive(false);
         if (creditsPanel != null) creditsPanel.SetActive(false);
+        if (pausePanel != null) pausePanel.SetActive(false);
 
+        // Oyunun başında Start Panel açık olur ve zaman durur
         if (startPanel != null)
         {
             startPanel.SetActive(true);
@@ -47,7 +51,6 @@ public class GameManager : MonoBehaviour
 
         highScore = PlayerPrefs.GetInt("HighScore", 0);
 
-        // Ses ayarını slider'a yükle (0 ile 1 arası)
         if (volumeSlider != null)
         {
             volumeSlider.value = AudioListener.volume;
@@ -57,7 +60,31 @@ public class GameManager : MonoBehaviour
         UpdateScoreUI();
     }
 
-    // --- BUTON FONKSİYONLARI ---
+    // --- PAUSE SİSTEMİ ---
+
+    public void PauseGame()
+    {
+        isPaused = true;
+        pausePanel.SetActive(true);
+        Time.timeScale = 0; // Zamanı dondur
+    }
+
+    public void ResumeGame()
+    {
+        isPaused = false;
+        pausePanel.SetActive(false);
+        settingsPanel.SetActive(false); // Eğer ayarlar açıksa onu da kapat
+        Time.timeScale = 1; // Zamanı akıt
+    }
+
+    // Senin "Refreshleriz olur" dediğin mantık: Sahneyi baştan yükler
+    public void ReturnToMainMenu()
+    {
+        Time.timeScale = 1; // Sahne yüklenmeden önce zamanı normale döndür (Önemli!)
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    // --- DİĞER BUTONLAR ---
 
     public void StartGame()
     {
@@ -65,41 +92,33 @@ public class GameManager : MonoBehaviour
         Time.timeScale = 1;
     }
 
-    // Settings Panelini Aç
     public void OpenSettings()
     {
         settingsPanel.SetActive(true);
-        // Start panelini kapatmak istersen: startPanel.SetActive(false);
     }
 
-    // Credits Panelini Aç
     public void OpenCredits()
     {
         creditsPanel.SetActive(true);
     }
 
-    // Panelleri Kapatma (Geri Tuşu İçin)
     public void ClosePanels()
     {
         settingsPanel.SetActive(false);
         creditsPanel.SetActive(false);
-        if (startPanel != null) startPanel.SetActive(true);
     }
 
-    // Ses Ayarı
     public void SetVolume(float volume)
     {
         AudioListener.volume = volume;
     }
 
-    // Oyundan Çıkış
     public void ExitGame()
     {
-        Debug.Log("Oyun Kapatılıyor..."); // Editörde görmek için
         Application.Quit();
     }
 
-    // --- DİĞER FONKSİYONLAR ---
+    // --- SKOR VE OYUN SONU ---
 
     public void AddScore(int amount)
     {
@@ -127,6 +146,7 @@ public class GameManager : MonoBehaviour
 
     public void RestartGame()
     {
+        Time.timeScale = 1;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }
